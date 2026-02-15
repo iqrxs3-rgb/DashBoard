@@ -54,7 +54,7 @@ app.get('/api/status', (req, res) => {
   res.status(200).json({
     status: 'running',
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.NODE_ENV || 'production',
   })
 })
 

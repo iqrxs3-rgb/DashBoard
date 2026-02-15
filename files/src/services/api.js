@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
-const API_BASE_URL = 'http://localhost:3001/api'
+const API_BASE_URL = 'https://backendbe.up.railway.app/'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

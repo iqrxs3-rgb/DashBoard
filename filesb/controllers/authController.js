@@ -11,7 +11,7 @@ export const getAuthUrl = (req, res) => {
     const authUrl = oauth.authorizeURL({
       client_id: process.env.DISCORD_CLIENT_ID,
       response_type: 'code',
-      redirect_uri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/callback`,
+      redirect_uri: `${process.env.FRONTEND_URL || 'https://beirut.up.railway.app'}/callback`,
       scope: ['identify', 'email', 'guilds'],
     })
 

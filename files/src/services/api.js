@@ -31,14 +31,13 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
-
 export const authApi = {
-  login: (code) => apiClient.post('/auth/login', { code }),
-  getCurrentUser: () => apiClient.get('/auth/me'),
-  logout: () => apiClient.post('/auth/logout'),
-}
-
+     login: (code) => api.post('/auth/callback', { code }),
+     getCurrentUser: () => api.get('/auth/me'),
+     logout: () => api.post('/auth/logout'),
+   }
 export const serverApi = {
+  
   getServers: () => apiClient.get('/servers'),
   getServer: (serverId) => apiClient.get(`/servers/${serverId}`),
   updateServer: (serverId, data) => apiClient.patch(`/servers/${serverId}`, data),

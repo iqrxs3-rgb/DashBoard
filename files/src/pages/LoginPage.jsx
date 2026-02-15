@@ -36,8 +36,7 @@ export const LoginPage = () => {
       setError(null)
 
       const response = await authApi.login(code)
-      const { token, user, servers } = response.data
-
+const { token, user, servers } = response.data.data              
       setToken(token)
       setUser(user)
       setServers(servers || [])

@@ -61,4 +61,4 @@ export const statisticsApi = {
   getStatistics: (serverId) => apiClient.get(`/servers/${serverId}/statistics`),
 }
 
-export default api
+export default apiClient

@@ -4,8 +4,8 @@ import { useAuthStore } from '../store/authStore'
 import { authApi } from '../services/api'
 import { Button } from '../components'
 
-const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID'
-const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI || 'http://localhost:3000/callback'
+const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || '1467241829492850794'
+const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI || 'https://backendbe.up.railway.app/auth/discord/callback'
 
 export const LoginPage = () => {
   const navigate = useNavigate()

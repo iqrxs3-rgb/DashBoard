@@ -3,11 +3,9 @@ import { useAuthStore } from '../store/authStore'
 
 const API_BASE_URL = 'https://backendbe.up.railway.app/'
 
-const apiClient = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
 apiClient.interceptors.request.use(
@@ -63,4 +61,4 @@ export const statisticsApi = {
   getStatistics: (serverId) => apiClient.get(`/servers/${serverId}/statistics`),
 }
 
-export default apiClient
+export default api

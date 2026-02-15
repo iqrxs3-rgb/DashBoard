@@ -1,15 +1,100 @@
 import Log from '../models/Log.js'
 import { successResponse, errorResponse } from '../utils/helpers.js';
-import express from "express";
 const router = express.Router();
+import oauth from './oauth.js';
+import express from "express";
 router.get("/discord", (req, res) => {
   res.send("Auth route working");
 });
-export default router;
 
-/**
- * Get logs for a guild with pagination and filtering
- */
+// POST /auth/callback - receives code from frontend
+router.post("/callback", async (req, res) => {
+  const { code } = req.body;
+
+  if (!code) {
+    return res.status(400).json({
+      success: false,
+      error: "No code provided",
+      statusCode: 400
+    });
+  }
+
+  try {
+    const user = await oauth.tokenRequest({
+      code,
+      scope: ['identify', 'email', 'guilds'],
+      grantType: 'authorization_code',
+    });
+
+    const userInfo = await oauth.getUser(user.access_token);
+    const guilds = await oauth.getUserGuilds(user.access_token);
+
+    const adminGuilds = guilds.filter(g => (g.permissions & 0x8) === 0x8);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        token: user.access_token,
+        user: {
+          id: userInfo.id,
+          username: userInfo.username,
+          avatar: userInfo.avatar,
+          email: userInfo.email,
+        },
+        servers: adminGuilds.map(g => ({
+          id: g.id,
+          name: g.name,
+          icon: g.icon,
+          isAdmin: (g.permissions & 0x8) === 0x8,
+        })),
+      }
+    });
+  } catch (err) {
+    console.error("Callback error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "OAuth failed",
+      statusCode: 500
+    });
+  }
+});
+
+// GET /auth/me - get current user
+router.get("/me", async (req, res) => {
+  try {
+    // Verify token and return user info
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: "No token provided"
+      });
+    }
+    
+    // Verify token with Discord
+    const userInfo = await oauth.getUser(token);
+    
+    return res.status(200).json({
+      success: true,
+      data: userInfo
+    });
+  } catch (err) {
+    console.error("Get user error:", err);
+    return res.status(401).json({
+      success: false,
+      error: "Invalid token"
+    });
+  }
+});
+
+// POST /auth/logout
+router.post("/logout", async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully"
+  });
+});
+// Export functions
 export const getGuildLogs = async (req, res) => {
   try {
     const { guildId } = req.params
@@ -85,29 +170,6 @@ export const getGuildLogs = async (req, res) => {
   }
 }
 
-
-
-router.get("/discord/callback", async (req, res) => {
-  const { code } = req.query;
-
-  if (!code) {
-    return res.status(400).send("No code provided");
-  }
-
-  try {
-    // هنا المفروض تسوي exchange للكود مع Discord
-    console.log("Discord code:", code);
-
-    res.send("Callback received successfully");
-  } catch (err) {
-    console.error("Callback error:", err);
-    res.status(500).send("OAuth failed");
-  }
-});
-
-/**
- * Get log by ID
- */
 export const getLogById = async (req, res) => {
   try {
     const { guildId, logId } = req.params
@@ -141,9 +203,6 @@ export const getLogById = async (req, res) => {
   }
 }
 
-/**
- * Clear all logs for a guild (admin only)
- */
 export const clearGuildLogs = async (req, res) => {
   try {
     const { guildId } = req.params
@@ -151,8 +210,8 @@ export const clearGuildLogs = async (req, res) => {
     const result = await Log.deleteMany({ guildId })
 
     // Log the action
-    const Log = (await import('../models/Log.js')).default
-    const logEntry = new Log({
+    const LogModel = (await import('../models/Log.js')).default
+    const logEntry = new LogModel({
       guildId,
       userId: req.user.discordId,
       username: req.user.username,
@@ -175,9 +234,6 @@ export const clearGuildLogs = async (req, res) => {
   }
 }
 
-/**
- * Get log statistics
- */
 export const getLogStatistics = async (req, res) => {
   try {
     const { guildId } = req.params
@@ -218,6 +274,7 @@ export const getLogStatistics = async (req, res) => {
         },
       },
     ])
+
     // Get top users
     const topUsers = await Log.aggregate([
       {
@@ -257,3 +314,5 @@ export const getLogStatistics = async (req, res) => {
     return res.status(500).json(errorResponse('Failed to get log statistics'))
   }
 }
+
+export default router;

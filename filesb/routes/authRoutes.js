@@ -1,7 +1,7 @@
 import Log from '../models/Log.js'
 import { successResponse, errorResponse } from '../utils/helpers.js';
 const router = express.Router();
-import oauth from './oauth.js';
+import oauth from '../config/discord.js';
 import express from "express";
 router.get("/discord", (req, res) => {
   res.send("Auth route working");

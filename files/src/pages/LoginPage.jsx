@@ -5,7 +5,7 @@ import { authApi } from '../services/api'
 import { Button } from '../components'
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || '1467241829492850794'
-const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI || 'https://backendbe.up.railway.app/auth/discord/callback'
+const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI || 'https://beirut.up.railway.app/callback'
 
 export const LoginPage = () => {
   const navigate = useNavigate()

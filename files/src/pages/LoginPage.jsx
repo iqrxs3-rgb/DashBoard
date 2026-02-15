@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../services/api'
-import  {apiClient } from '../services/api'
 import { Button } from '../components'
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || '1467241829492850794'

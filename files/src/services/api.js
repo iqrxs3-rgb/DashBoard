@@ -8,7 +8,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-apiClient.interceptors.request.use(
+api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token
     if (token) {
@@ -19,7 +19,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-apiClient.interceptors.response.use(
+apit.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
@@ -36,29 +36,29 @@ export const authApi = {
    }
 export const serverApi = {
   
-  getServers: () => apiClient.get('/servers'),
-  getServer: (serverId) => apiClient.get(`/servers/${serverId}`),
-  updateServer: (serverId, data) => apiClient.patch(`/servers/${serverId}`, data),
+  getServers: () => api.get('/servers'),
+  getServer: (serverId) => api.get(`/servers/${serverId}`),
+  updateServer: (serverId, data) => api.patch(`/servers/${serverId}`, data),
 }
 
 export const commandApi = {
-  getCommands: (serverId) => apiClient.get(`/servers/${serverId}/commands`),
-  createCommand: (serverId, data) => apiClient.post(`/servers/${serverId}/commands`, data),
-  updateCommand: (serverId, commandId, data) => apiClient.patch(`/servers/${serverId}/commands/${commandId}`, data),
-  deleteCommand: (serverId, commandId) => apiClient.delete(`/servers/${serverId}/commands/${commandId}`),
+  getCommands: (serverId) => api.get(`/servers/${serverId}/commands`),
+  createCommand: (serverId, data) => api.post(`/servers/${serverId}/commands`, data),
+  updateCommand: (serverId, commandId, data) => api.patch(`/servers/${serverId}/commands/${commandId}`, data),
+  deleteCommand: (serverId, commandId) => api.delete(`/servers/${serverId}/commands/${commandId}`),
 }
 
 export const roleApi = {
-  getRoles: (serverId) => apiClient.get(`/servers/${serverId}/roles`),
-  updateRoles: (serverId, data) => apiClient.patch(`/servers/${serverId}/roles`, data),
+  getRoles: (serverId) => api.get(`/servers/${serverId}/roles`),
+  updateRoles: (serverId, data) => api.patch(`/servers/${serverId}/roles`, data),
 }
 
 export const logApi = {
-  getLogs: (serverId, params) => apiClient.get(`/servers/${serverId}/logs`, { params }),
+  getLogs: (serverId, params) => api.get(`/servers/${serverId}/logs`, { params }),
 }
 
 export const statisticsApi = {
-  getStatistics: (serverId) => apiClient.get(`/servers/${serverId}/statistics`),
+  getStatistics: (serverId) => api.get(`/servers/${serverId}/statistics`),
 }
 
-export default apiClient
+export default api

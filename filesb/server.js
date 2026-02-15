@@ -23,16 +23,18 @@ const PORT = process.env.PORT || 3001
 // MIDDLEWARE
 // ============================================
 
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'https://beirut.up.railway.app',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-)
+ // Add CORS middleware BEFORE your routes
+app.use(cors({
+  origin: [
+    'https://beirut.up.railway.app',
+    'http://beirut.up.railway.app' // for local development
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
+app.options('/auth/callback', cors()); // Explicitly allow preflight for this route
 // Request logging
 app.use(morgan('combined'))
 
@@ -59,10 +61,10 @@ app.get('/api/status', (req, res) => {
 })
 
 // Auth routes
-app.use('/api/auth', authRoutes)
+app.use('/auth', authRoutes)
 
 // Guild routes
-app.use('/api/guilds', guildRoutes)
+app.use('/guilds', guildRoutes)
 
 // Command routes (nested under guilds)
 app.use('/api/guilds/:guildId/commands', commandRoutes)
@@ -98,10 +100,10 @@ const startServer = async () => {
 ╔════════════════════════════════════════════════════╗
 ║  Discord Bot Dashboard Backend                     ║
 ╠════════════════════════════════════════════════════╣
-║  🚀 Server running on: http://localhost:${PORT}    ║
+║  🚀 Server running on: https://beirut.up.railway.app}    ║
 ║  📦 Database: Connected                           ║
-║  🔌 CORS Origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}  ║
-║  ⚙️  Environment: ${process.env.NODE_ENV || 'development'}                  ║
+║  🔌 CORS Origin: ${process.env.FRONTEND_URL || 'https://beirut.up.railway.app'}  ║
+║  ⚙️  Environment: ${process.env.NODE_ENV || 'production'}                  ║
 ╚════════════════════════════════════════════════════╝
       `)
     })

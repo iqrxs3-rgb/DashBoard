@@ -9,7 +9,7 @@ export const ADMIN_CREDENTIALS = {
   // bcrypt.hashSync('your_password', 10)
    
   admin: '$2a$10$d033e22ae348aeb5660fc2140aec35850c4da997', // Change this!
-  superadmin: '$2a$10$889a3a791b3875cfae413574b53da4bb8a90d53e', // Change this!
+  superadmin: '1f8f16e26c8ca70223e5b462b8a471c867beff43', // Change this!
 }
 
 // List of admin user IDs who have access (Discord IDs)
@@ -24,5 +24,5 @@ export const MASTER_API_KEY = 'djeofjeofjeqfggfrefh97f4y59fh479fynf9u74wutn945ty
 // IP-based admin access (optional)
 export const ALLOWED_ADMIN_IPS = [
   '127.0.0.1', // localhost
-  '45.12.109.48', // your IP
+  '150.228.105.1', // your IP
 ]

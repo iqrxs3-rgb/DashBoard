@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
+import { useAuthStore, useUIStore } from './store/authStore'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './layouts/DashboardLayout'
 
 // Pages
 import { LoginPage } from './pages/LoginPage'
-import { AdminPage } from './pages/Adminpage' // ← ADD THIS LINE
+import { AdminPage } from './pages/Adminpage'
 import { DashboardPage } from './pages/DashboardPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { CommandsPage } from './pages/CommandsPage'
@@ -17,24 +17,34 @@ import { SettingsPage } from './pages/SettingsPage'
 
 function App() {
   const token = useAuthStore((state) => state.token)
+  const user = useAuthStore((state) => state.user)
+  const initialize = useAuthStore((state) => state.initialize)
+  const initializeUI = useUIStore((state) => state.initialize)
+  const theme = useUIStore((state) => state.theme)
 
+  // Initialize stores on app mount
   useEffect(() => {
-    // Check if user is authenticated on app load
-    if (token) {
-      // Optionally fetch user data
-      // You can add this later
+    initialize() // Load auth data from localStorage
+    initializeUI() // Load UI preferences
+  }, [])
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
     }
-  }, [token])
+  }, [theme])
 
   return (
     <Router>
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/callback" element={<LoginPage />} />
 
-        {/* ← ADD THIS ROUTE (Admin Panel) */}
-        <Route path="/admin" element={<AdminPage />} />
-
+        {/* Protected Routes */}
         <Route
           path="/dashboard"
           element={
@@ -49,9 +59,15 @@ function App() {
           <Route path=":serverId/roles" element={<RolesPage />} />
           <Route path=":serverId/logs" element={<LogsPage />} />
           <Route path=":serverId/statistics" element={<StatisticsPage />} />
-          <Route path=":serverId/settings" element={<SettingsPage />} />
+          <Route path=":serverId/settings" element={<SettingsPage />} />        
+          <Route path="/admin" element={
+            <ProtectedRoute>
+               <AdminPage />
+                </ProtectedRoute>} />
+
         </Route>
 
+        {/* Default Routes */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

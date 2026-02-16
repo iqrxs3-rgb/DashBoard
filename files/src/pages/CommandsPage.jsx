@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Trash2, Plus, Edit2 } from 'lucide-react'
 import { Button, Card, Input, Modal, Table } from '../components'
-
+const response = await commandApi.getCommands(guildId)
 const mockCommands = [
   { id: 1, name: 'help', description: 'Show help information', enabled: true },
   { id: 2, name: 'ban', description: 'Ban a user from the server', enabled: true },

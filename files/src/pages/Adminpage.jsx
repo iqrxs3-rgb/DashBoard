@@ -4,16 +4,62 @@ import { useAuthStore } from '../store/authStore'
 import { Card, Button, Input } from '../components'
 import { Lock, Server, Users, AlertTriangle, Trash2, Ban, Database } from 'lucide-react'
 
-const AdminLoginPage = ({ onAdminLogin }) => {
+const AdminLoginPage = ({ onAdminLogin, user }) => {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async () => {
+  // Try Discord login first
+  useEffect(() => {
+    if (user?.id) {
+      tryDiscordLogin()
+    }
+  }, [user])
+
+  const tryDiscordLogin = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/admin/verify-credentials', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({
+          username: '',
+          password: '',
+          apiKey: undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.data) {
+        console.log('✅ Discord admin login successful')
+        onAdminLogin(data.data)
+      } else {
+        setError('You are not an admin. Contact administrator.')
+        console.log('❌ Not an admin:', data.error)
+      }
+    } catch (err) {
+      setError('Discord login failed: ' + err.message)
+      console.error('Discord login error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCredentialsLogin = async () => {
     try {
       setLoading(true)
       setError('')
+
+      if (!credentials.username && !apiKey) {
+        setError('Enter username/password or API key')
+        setLoading(false)
+        return
+      }
 
       const response = await fetch('/api/admin/verify-credentials', {
         method: 'POST',
@@ -29,13 +75,15 @@ const AdminLoginPage = ({ onAdminLogin }) => {
 
       if (!response.ok) {
         setError(data.error || 'Authentication failed')
+        console.error('Login error:', data)
         return
       }
 
+      console.log('✅ Credentials login successful')
       onAdminLogin(data.data)
     } catch (err) {
-      setError('Connection error')
-      console.error(err)
+      setError('Connection error: ' + err.message)
+      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }
@@ -51,7 +99,7 @@ const AdminLoginPage = ({ onAdminLogin }) => {
 
           <h1 className="text-2xl font-bold text-white text-center mb-2">Admin Panel</h1>
           <p className="text-gray-400 text-center text-sm mb-6">
-            Restricted access - Only authorized admins
+            {user ? `Logged in as: ${user.username}` : 'Restricted access - Only authorized admins'}
           </p>
 
           {error && (
@@ -60,46 +108,65 @@ const AdminLoginPage = ({ onAdminLogin }) => {
             </div>
           )}
 
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Username</label>
-              <Input
-                type="text"
-                placeholder="Admin username"
-                value={credentials.username}
-                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-              />
+          {loading && (
+            <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500 rounded text-blue-300 text-sm">
+              Verifying admin access...
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Password</label>
-              <Input
-                type="password"
-                placeholder="Admin password"
-                value={credentials.password}
-                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-              />
+          {/* If logged in with Discord, auto-check for admin */}
+          {user && loading && (
+            <p className="text-center text-gray-400 text-sm">
+              Checking if you're an admin...
+            </p>
+          )}
+
+          {/* If not auto-logged or auto-login failed, show credentials form */}
+          {(!user || !loading) && (
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Username</label>
+                <Input
+                  type="text"
+                  placeholder="Admin username"
+                  value={credentials.username}
+                  onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Password</label>
+                <Input
+                  type="password"
+                  placeholder="Admin password"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Or API Key</label>
+                <Input
+                  type="password"
+                  placeholder="Master API key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <Button
+                variant="primary"
+                onClick={handleCredentialsLogin}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? 'Verifying...' : 'Login to Admin Panel'}
+              </Button>
             </div>
-
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Or API Key</label>
-              <Input
-                type="password"
-                placeholder="Master API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? 'Verifying...' : 'Login to Admin Panel'}
-          </Button>
+          )}
 
           <p className="text-xs text-gray-500 text-center mt-4">
             Unauthorized access attempts are logged
@@ -113,6 +180,7 @@ const AdminLoginPage = ({ onAdminLogin }) => {
 export const AdminPage = () => {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
+  const token = useAuthStore((state) => state.token)
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminLevel, setAdminLevel] = useState(null)
   const [stats, setStats] = useState(null)
@@ -125,6 +193,7 @@ export const AdminPage = () => {
   const [banIpData, setBanIpData] = useState({ ip: '', reason: '' })
 
   const handleAdminLogin = async (adminData) => {
+    console.log('Admin login successful:', adminData)
     setIsAdmin(true)
     setAdminLevel(adminData.adminLevel)
     await loadAdminData()
@@ -133,21 +202,33 @@ export const AdminPage = () => {
   const loadAdminData = async () => {
     try {
       setLoading(true)
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      }
+
       const [statsRes, serversRes, usersRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/servers'),
-        fetch('/api/admin/users'),
+        fetch('/api/admin/stats', { headers }),
+        fetch('/api/admin/servers', { headers }),
+        fetch('/api/admin/users', { headers }),
       ])
+
+      if (!statsRes.ok || !serversRes.ok || !usersRes.ok) {
+        throw new Error('Failed to load admin data')
+      }
 
       const statsData = await statsRes.json()
       const serversData = await serversRes.json()
       const usersData = await usersRes.json()
+
+      console.log('Admin data loaded:', { statsData, serversData, usersData })
 
       setStats(statsData.data)
       setServers(serversData.data.servers)
       setUsers(usersData.data.users)
     } catch (error) {
       console.error('Failed to load admin data:', error)
+      alert('Error loading admin data: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -157,7 +238,10 @@ export const AdminPage = () => {
     try {
       const response = await fetch(`/api/admin/servers/${guildId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ confirmationCode: 'DELETE_SERVER_CONFIRM' }),
       })
 
@@ -166,11 +250,12 @@ export const AdminPage = () => {
         setShowDeleteConfirm(null)
         alert(`Server "${serverName}" deleted!`)
       } else {
-        alert('Failed to delete server')
+        const error = await response.json()
+        alert('Failed to delete server: ' + (error.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Delete error:', error)
-      alert('Error deleting server')
+      alert('Error deleting server: ' + error.message)
     }
   }
 
@@ -178,7 +263,10 @@ export const AdminPage = () => {
     try {
       const response = await fetch('/api/admin/ban-ip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           ipAddress: banIpData.ip,
           reason: banIpData.reason,
@@ -190,14 +278,18 @@ export const AdminPage = () => {
         alert(`IP ${banIpData.ip} banned!`)
         setBanIpData({ ip: '', reason: '' })
         setShowBanIPForm(false)
+      } else {
+        const error = await response.json()
+        alert('Failed to ban IP: ' + (error.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Ban IP error:', error)
+      alert('Error banning IP: ' + error.message)
     }
   }
 
   if (!isAdmin) {
-    return <AdminLoginPage onAdminLogin={handleAdminLogin} />
+    return <AdminLoginPage onAdminLogin={handleAdminLogin} user={user} />
   }
 
   return (
@@ -279,30 +371,36 @@ export const AdminPage = () => {
               Server Management ({servers.length})
             </h2>
 
-            <Card noPadding>
-              <div className="divide-y divide-discord-bg max-h-[600px] overflow-y-auto">
-                {servers.map(server => (
-                  <div
-                    key={server.id}
-                    className="px-6 py-4 hover:bg-discord-darker/50 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold text-white">{server.name}</p>
-                      <p className="text-sm text-gray-400">
-                        {server.memberCount} members • {server.commandCount} commands
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => setShowDeleteConfirm(server.id)}
-                      className="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400"
+            {servers.length === 0 ? (
+              <Card className="text-center py-8">
+                <p className="text-gray-400">No servers in database yet</p>
+              </Card>
+            ) : (
+              <Card noPadding>
+                <div className="divide-y divide-discord-bg max-h-[600px] overflow-y-auto">
+                  {servers.map(server => (
+                    <div
+                      key={server.id}
+                      className="px-6 py-4 hover:bg-discord-darker/50 transition-colors flex items-center justify-between"
                     >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                      <div>
+                        <p className="font-semibold text-white">{server.name}</p>
+                        <p className="text-sm text-gray-400">
+                          {server.memberCount} members • {server.commandCount} commands
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setShowDeleteConfirm(server.id)}
+                        className="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Delete Confirmation */}
             {showDeleteConfirm && (
@@ -340,27 +438,33 @@ export const AdminPage = () => {
               User Management ({users.length})
             </h2>
 
-            <Card noPadding>
-              <div className="divide-y divide-discord-bg max-h-[600px] overflow-y-auto">
-                {users.map(userData => (
-                  <div
-                    key={userData.id}
-                    className="px-6 py-4 hover:bg-discord-darker/50 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold text-white">{userData.username}</p>
-                      <p className="text-sm text-gray-400">
-                        {userData.email} • {userData.serverCount} servers
-                      </p>
-                    </div>
+            {users.length === 0 ? (
+              <Card className="text-center py-8">
+                <p className="text-gray-400">No users yet</p>
+              </Card>
+            ) : (
+              <Card noPadding>
+                <div className="divide-y divide-discord-bg max-h-[600px] overflow-y-auto">
+                  {users.map(userData => (
+                    <div
+                      key={userData.id}
+                      className="px-6 py-4 hover:bg-discord-darker/50 transition-colors flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-white">{userData.username}</p>
+                        <p className="text-sm text-gray-400">
+                          {userData.email} • {userData.serverCount} servers
+                        </p>
+                      </div>
 
-                    <button className="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400">
-                      <Ban size={18} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                      <button className="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400">
+                        <Ban size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         )}
 

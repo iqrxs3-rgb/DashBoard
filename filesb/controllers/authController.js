@@ -2,7 +2,108 @@ import oauth from '../config/discord.js'
 import User from '../models/User.js'
 import Guild from '../models/Guild.js'
 import { generateToken, successResponse, errorResponse, sanitizeUser } from '../utils/helpers.js'
+   /**
+ * أضف هذا الكود في authController.js
+ * في آخر الملف قبل export
+ */
+    const jwtToken = generateToken(user.discordId)
 
+import jwt from 'jsonwebtoken'
+
+/**
+ * Refresh Access Token
+ * POST /auth/refresh
+ */
+export const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token required',
+        statusCode: 401
+      })
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET || 'your-refresh-secret'
+    )
+
+    // Get user
+    const user = await User.findById(decoded.userId)
+
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+        statusCode: 401
+      })
+    }
+
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET || 'your-jwt-secret',
+      { expiresIn: '15m' }
+    )
+
+    return res.status(200).json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        token: newAccessToken,
+        expiresIn: 900 
+      }
+    })
+  } catch (error) {
+    console.error('Refresh token error:', error)
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token expired',
+        statusCode: 401
+      })
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid refresh token',
+      statusCode: 401
+    })
+  }
+}
+
+/**
+ * Logout
+ * POST /auth/logout
+ */
+export const logout = async (req, res) => {
+  try {
+    const userId = req.user?.userId // من token middleware
+
+    if (userId) {
+      // حذف refresh token من DB
+      await User.findByIdAndUpdate(userId, {
+        $unset: { refreshToken: 1 }
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    })
+  } catch (error) {
+    console.error('Logout error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Logout failed'
+    })
+  }
+}
 /**
  * Get Discord OAuth authorization URL
  */
@@ -194,30 +295,9 @@ export const getUserGuilds = async (req, res) => {
   }
 }
 
-/**
- * Logout user
- */
-export const logout = async (req, res) => {
-  try {
-    // In a real app, you might invalidate the refresh token
-    return res.status(200).json(successResponse(null, 'Logged out successfully'))
-  } catch (error) {
-    console.error('Logout error:', error)
-    return res.status(500).json(errorResponse('Logout failed'))
-  }
-}
 
-/**
- * Refresh access token
- */
-export const refreshAccessToken = async (req, res) => {
-  try {
-    const user = req.user
 
-    // Check if refresh token is expired
-    if (!user.refreshToken || !user.tokenExpiry || user.tokenExpiry < new Date()) {
-      return res.status(401).json(errorResponse('Refresh token expired. Please login again.', 401))
-    }
+ 
 
     // Refresh the token
     const token = await oauth.tokenRequest({
@@ -234,11 +314,3 @@ export const refreshAccessToken = async (req, res) => {
     await user.save()
 
     // Generate new JWT token
-    const jwtToken = generateToken(user.discordId)
-
-    return res.status(200).json(successResponse({ token: jwtToken }, 'Token refreshed'))
-  } catch (error) {
-    console.error('Token refresh error:', error)
-    return res.status(401).json(errorResponse('Failed to refresh token'))
-  }
-}

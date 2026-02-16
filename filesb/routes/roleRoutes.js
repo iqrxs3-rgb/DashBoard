@@ -6,6 +6,7 @@ import {
   updateMultipleRoles,
 } from '../controllers/roleController.js'
 import { authenticateToken, isGuildAdmin } from '../middlewares/auth.js'
+import { validateInput, validateRole } from '../utils/validators.js'
 
 const router = express.Router({ mergeParams: true })
 
@@ -29,7 +30,7 @@ router.get('/:roleId', authenticateToken, isGuildAdmin, getRoleById)
  * Headers: Authorization: Bearer <token>
  * Body: { permissions }
  */
-router.put('/:roleId', authenticateToken, isGuildAdmin, updateRolePermissions)
+router.put('/:roleId', authenticateToken, isGuildAdmin, validateInput(validateRole), updateRolePermissions)
 
 /**
  * PUT /guilds/:guildId/roles
@@ -37,6 +38,6 @@ router.put('/:roleId', authenticateToken, isGuildAdmin, updateRolePermissions)
  * Headers: Authorization: Bearer <token>
  * Body: { roles: [{ roleId, roleName, permissions }] }
  */
-router.put('/', authenticateToken, isGuildAdmin, updateMultipleRoles)
+router.put('/', authenticateToken, isGuildAdmin, validateInput(validateRole), updateMultipleRoles)
 
 export default router

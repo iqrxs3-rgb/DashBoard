@@ -8,6 +8,7 @@ import {
   bulkUpdateCommands,
 } from '../controllers/commandController.js'
 import { authenticateToken, isGuildAdmin } from '../middlewares/auth.js'
+import { validateInput, validateCommand } from '../utils/validators.js'
 
 const router = express.Router({ mergeParams: true })
 
@@ -25,7 +26,7 @@ router.get('/', authenticateToken, isGuildAdmin, getGuildCommands)
  * Headers: Authorization: Bearer <token>
  * Body: { name, description, enabled }
  */
-router.post('/', authenticateToken, isGuildAdmin, createCommand)
+router.post('/', authenticateToken, isGuildAdmin, validateInput(validateCommand), createCommand)
 
 /**
  * GET /guilds/:guildId/commands/:commandId
@@ -40,7 +41,7 @@ router.get('/:commandId', authenticateToken, isGuildAdmin, getCommandById)
  * Headers: Authorization: Bearer <token>
  * Body: { description, enabled }
  */
-router.put('/:commandId', authenticateToken, isGuildAdmin, updateCommand)
+router.put('/:commandId', authenticateToken, isGuildAdmin, validateInput(validateCommand), updateCommand)
 
 /**
  * DELETE /guilds/:guildId/commands/:commandId

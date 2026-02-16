@@ -4,6 +4,8 @@ import morgan from 'morgan'
 import dotenv from 'dotenv'
 import { connectDB, disconnectDB } from './config/database.js'
 import { globalErrorHandler, notFoundHandler, catchAsync } from './middlewares/errorHandler.js'
+import corsOptions from './config/cors.js'
+import { generalLimiter, authLimiter } from './middlewares/rateLimiter.js'
 
 // Import routes
 import authRoutes from './routes/authRoutes.js'
@@ -11,7 +13,9 @@ import guildRoutes from './routes/guildRoutes.js'
 import commandRoutes from './routes/commandRoutes.js'
 import roleRoutes from './routes/roleRoutes.js'
 import logRoutes from './routes/logRoutes.js'
-import adminRoutes from './routes/adminRoutes.js'// Load environment variables
+import adminRoutes from './routes/adminRoutes.js'
+
+// Load environment variables
 dotenv.config()
 
 // Initialize Express app
@@ -22,18 +26,14 @@ const PORT = process.env.PORT || 3001
 // MIDDLEWARE
 // ============================================
 
- // Add CORS middleware BEFORE your routes
-app.use(cors({
-  origin: [
-    'https://beirut.up.railway.app',
-    'http://beirut.up.railway.app' // for local development
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// CORS محسّن
+app.use(cors(corsOptions))
 
-app.options('/auth/callback', cors()); // Explicitly allow preflight for this route
+// Rate Limiting
+app.use('/api/', generalLimiter)
+app.use('/auth/callback', authLimiter)
+app.use('/auth/login', authLimiter)
+
 // Request logging
 app.use(morgan('combined'))
 
@@ -100,10 +100,10 @@ const startServer = async () => {
 ╔════════════════════════════════════════════════════╗
 ║  Discord Bot Dashboard Backend                     ║
 ╠════════════════════════════════════════════════════╣
-║  🚀 Server running on: https://beirut.up.railway.app}    ║
-║  📦 Database: Connected                           ║
-║  🔌 CORS Origin: ${process.env.FRONTEND_URL || 'https://beirut.up.railway.app'}  ║
-║  ⚙️  Environment: ${process.env.NODE_ENV || 'production'}                  ║
+║  Server running on: https://beirut.up.railway.app  ║
+║  📦 Database: Connected                            ║
+║  🔌 CORS Origins: ${process.env.ALLOWED_ORIGINS || 'https://beirut.up.railway.app'}  ║
+║  ⚙️  Environment: ${process.env.NODE_ENV || 'prodution'}║
 ╚════════════════════════════════════════════════════╝
       `)
     })

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button, Card, Toggle } from '../components'
-import { roleApi } from '../services/api'
 import { Save } from 'lucide-react'
 
 const mockRoles = [

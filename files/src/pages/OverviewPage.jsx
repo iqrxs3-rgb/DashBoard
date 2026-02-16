@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Card } from '../components'
-import { statisticsApi } from '../services/api'
+import { serverApi } from '../services/api'
 import {
   LineChart,
   Line,
@@ -16,20 +16,13 @@ import {
 } from 'recharts'
 import { Users, MessageSquare, Zap, TrendingUp } from 'lucide-react'
 
-const mockChartData = [
-  { date: 'Mon', commands: 120, users: 240 },
-  { date: 'Tue', commands: 150, users: 180 },
-  { date: 'Wed', commands: 200, users: 250 },
-  { date: 'Thu', commands: 180, users: 290 },
-  { date: 'Fri', commands: 220, users: 320 },
-  { date: 'Sat', commands: 250, users: 280 },
-  { date: 'Sun', commands: 210, users: 300 },
-]
-
 export const OverviewPage = () => {
   const { serverId } = useParams()
   const [stats, setStats] = useState(null)
+  const [chartData, setChartData] = useState([])
+  const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     loadStatistics()
@@ -37,19 +30,45 @@ export const OverviewPage = () => {
 
   const loadStatistics = async () => {
     try {
-      // In real scenario, fetch from API
-      // const response = await statisticsApi.getStatistics(serverId)
-      // setStats(response.data)
+      setLoading(true)
+      setError(null)
 
-      // Mock data for demo
+      // Fetch guild statistics from backend
+      const response = await serverApi.getServer(serverId)
+      const guildData = response.data.data
+
+      // Set basic stats
       setStats({
-        totalUsers: 1234,
-        totalCommands: 5678,
-        activeUsers: 456,
+        totalUsers: guildData.memberCount || 0,
+        totalCommands: 0, // Will be set from logs
+        activeUsers: 0,
         uptime: '99.8%',
       })
-    } catch (error) {
-      console.error('Error loading statistics:', error)
+
+      // Generate chart data (you can replace this with real data from backend)
+      const generateChartData = () => {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        return days.map(day => ({
+          date: day,
+          commands: Math.floor(Math.random() * 300) + 50,
+          users: Math.floor(Math.random() * 400) + 100,
+        }))
+      }
+
+      setChartData(generateChartData())
+
+      // Set recent activity from logs
+      const recentLogs = guildData.recentLogs || []
+      setRecentActivity(
+        recentLogs.map(log => ({
+          user: log.type,
+          action: log.message,
+          time: new Date(log.timestamp).toLocaleDateString(),
+        }))
+      )
+    } catch (err) {
+      console.error('Error loading statistics:', err)
+      setError(err.response?.data?.message || 'Failed to load statistics')
     } finally {
       setLoading(false)
     }
@@ -57,8 +76,19 @@ export const OverviewPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-96">
         <div className="text-gray-400">Loading overview...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-white">Overview</h1>
+        <Card className="border-red-500 bg-red-500/10">
+          <p className="text-red-400">{error}</p>
+        </Card>
       </div>
     )
   }
@@ -112,7 +142,7 @@ export const OverviewPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="Commands Usage" noPadding className="p-0">
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mockChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#404450" />
               <XAxis dataKey="date" stroke="#999" />
               <YAxis stroke="#999" />
@@ -138,7 +168,7 @@ export const OverviewPage = () => {
 
         <Card title="User Activity" noPadding className="p-0">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={mockChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+            <BarChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#404450" />
               <XAxis dataKey="date" stroke="#999" />
               <YAxis stroke="#999" />
@@ -159,20 +189,19 @@ export const OverviewPage = () => {
 
       <Card title="Recent Activity">
         <div className="space-y-3">
-          {[
-            { user: 'John#1234', action: 'Used command /help', time: '5 min ago' },
-            { user: 'Jane#5678', action: 'Joined the server', time: '12 min ago' },
-            { user: 'Bot#0000', action: 'Sent notification', time: '23 min ago' },
-            { user: 'Admin#9999', action: 'Updated settings', time: '1 hour ago' },
-          ].map((activity, idx) => (
-            <div key={idx} className="flex items-center justify-between pb-3 border-b border-discord-bg last:border-0">
-              <div>
-                <p className="font-medium text-white">{activity.user}</p>
-                <p className="text-sm text-gray-400">{activity.action}</p>
+          {recentActivity.length > 0 ? (
+            recentActivity.map((activity, idx) => (
+              <div key={idx} className="flex items-center justify-between pb-3 border-b border-discord-bg last:border-0">
+                <div>
+                  <p className="font-medium text-white">{activity.user}</p>
+                  <p className="text-sm text-gray-400">{activity.action}</p>
+                </div>
+                <span className="text-sm text-gray-500">{activity.time}</span>
               </div>
-              <span className="text-sm text-gray-500">{activity.time}</span>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-gray-400 text-center py-4">No recent activity</p>
+          )}
         </div>
       </Card>
     </div>

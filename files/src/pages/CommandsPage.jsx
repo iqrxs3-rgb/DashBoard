@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Trash2, Plus, Edit2 } from 'lucide-react'
 import { Button, Card, Input, Modal, Table } from '../components'
-import { commandApi } from '../services/api'
 
 const mockCommands = [
   { id: 1, name: 'help', description: 'Show help information', enabled: true },

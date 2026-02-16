@@ -50,6 +50,46 @@ const guildSchema = new mongoose.Schema({
       default: 'general',
     },
   },
+  
+  // Statistics tracking
+  stats: {
+    totalCommands: {
+      type: Number,
+      default: 0,
+    },
+    totalMessages: {
+      type: Number,
+      default: 0,
+    },
+    totalUsers: {
+      type: Number,
+      default: 0,
+    },
+    activeUsers: {
+      type: Number,
+      default: 0,
+    },
+    lastCommandAt: Date,
+    lastMessageAt: Date,
+  },
+
+  // Daily statistics for charts
+  dailyStats: [{
+    date: Date,
+    commands: {
+      type: Number,
+      default: 0,
+    },
+    messages: {
+      type: Number,
+      default: 0,
+    },
+    users: {
+      type: Number,
+      default: 0,
+    },
+  }],
+
   admins: [String], // Discord user IDs
   moderators: [String], // Discord user IDs
   createdAt: {

@@ -1,4 +1,11 @@
 node_modules/
-node_modules/.bin
+package-lock.json
 .env
-dist/
+.env.local
+*.log
+.vscode/
+.idea/
+.DS_Store
+*.db
+Other/
+/Other

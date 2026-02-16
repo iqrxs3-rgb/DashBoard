@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button, Card, Table } from '../components'
-import { logApi } from '../services/api'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate } from '../utils/helpers'
 

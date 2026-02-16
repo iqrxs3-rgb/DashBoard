@@ -4,22 +4,15 @@ import { Button, Card, Input, Toggle } from '../components'
 import { serverApi } from '../services/api'
 import { Save } from 'lucide-react'
 
-const mockServerSettings = {
-  prefix: '!',
-  autoModeration: true,
-  welcomeMessage: true,
-  logsEnabled: true,
-  announcements: false,
-  welcomeChannel: '#general',
-  description: 'My awesome Discord bot',
-}
-
 export const SettingsPage = () => {
   const { serverId } = useParams()
-  const [settings, setSettings] = useState(mockServerSettings)
-  const [originalSettings, setOriginalSettings] = useState(mockServerSettings)
-  const [loading, setLoading] = useState(false)
+  const [settings, setSettings] = useState(null)
+  const [originalSettings, setOriginalSettings] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -28,11 +21,27 @@ export const SettingsPage = () => {
   const loadSettings = async () => {
     try {
       setLoading(true)
-      // In real scenario: const response = await serverApi.getServer(serverId)
-      // setSettings(response.data)
-      // setOriginalSettings(response.data)
-    } catch (error) {
-      console.error('Error loading settings:', error)
+      setError(null)
+      
+      // Fetch guild settings from backend
+      const response = await serverApi.getServer(serverId)
+      const guildData = response.data.data
+      
+      const settingsData = {
+        prefix: guildData.prefix || '!',
+        description: guildData.description || '',
+        welcomeChannel: guildData.settings?.welcomeChannel || 'general',
+        autoModeration: guildData.settings?.autoModeration || false,
+        welcomeMessage: guildData.settings?.welcomeMessage || false,
+        logsEnabled: guildData.settings?.logsEnabled || true,
+        announcements: guildData.settings?.announcements || false,
+      }
+      
+      setSettings(settingsData)
+      setOriginalSettings(settingsData)
+    } catch (err) {
+      console.error('Error loading settings:', err)
+      setError(err.response?.data?.message || 'Failed to load settings')
     } finally {
       setLoading(false)
     }
@@ -46,16 +55,37 @@ export const SettingsPage = () => {
 
   const handleSaveSettings = async () => {
     try {
-      setLoading(true)
-      // await serverApi.updateServer(serverId, settings)
+      setSaving(true)
+      setError(null)
+      setSuccess(false)
+      
+      // Prepare data for backend
+      const updateData = {
+        prefix: settings.prefix,
+        description: settings.description,
+        settings: {
+          autoModeration: settings.autoModeration,
+          welcomeMessage: settings.welcomeMessage,
+          logsEnabled: settings.logsEnabled,
+          announcements: settings.announcements,
+          welcomeChannel: settings.welcomeChannel,
+        }
+      }
+      
+      // Send to backend
+      await serverApi.updateServer(serverId, updateData)
+      
       setOriginalSettings(settings)
       setHasChanges(false)
-      alert('Settings saved successfully!')
-    } catch (error) {
-      console.error('Error saving settings:', error)
-      alert('Failed to save settings')
+      setSuccess(true)
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err) {
+      console.error('Error saving settings:', err)
+      setError(err.response?.data?.message || 'Failed to save settings')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -64,6 +94,14 @@ export const SettingsPage = () => {
       setSettings(originalSettings)
       setHasChanges(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-gray-400">Loading settings...</div>
+      </div>
+    )
   }
 
   return (
@@ -75,29 +113,41 @@ export const SettingsPage = () => {
             <Button
               variant="secondary"
               onClick={handleReset}
-              disabled={loading}
+              disabled={saving}
             >
               Reset
             </Button>
           )}
           <Button
             variant="primary"
-            disabled={!hasChanges || loading}
+            disabled={!hasChanges || saving}
             onClick={handleSaveSettings}
             className="flex items-center gap-2"
           >
             <Save size={18} />
-            Save Settings
+            {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </div>
+
+      {error && (
+        <Card className="border-red-500 bg-red-500/10">
+          <p className="text-red-400">{error}</p>
+        </Card>
+      )}
+
+      {success && (
+        <Card className="border-green-500 bg-green-500/10">
+          <p className="text-green-400">✓ Settings saved successfully!</p>
+        </Card>
+      )}
 
       <Card title="Bot Configuration">
         <div className="space-y-6">
           <Input
             label="Command Prefix"
             placeholder="e.g., !"
-            value={settings.prefix}
+            value={settings?.prefix || ''}
             onChange={(e) => handleChange('prefix', e.target.value)}
             maxLength={5}
           />
@@ -105,14 +155,14 @@ export const SettingsPage = () => {
           <Input
             label="Server Description"
             placeholder="Describe your bot's purpose"
-            value={settings.description}
+            value={settings?.description || ''}
             onChange={(e) => handleChange('description', e.target.value)}
           />
 
           <Input
             label="Welcome Channel"
             placeholder="e.g., #general"
-            value={settings.welcomeChannel}
+            value={settings?.welcomeChannel || ''}
             onChange={(e) => handleChange('welcomeChannel', e.target.value)}
           />
         </div>
@@ -126,7 +176,7 @@ export const SettingsPage = () => {
               <p className="text-sm text-gray-400">Automatically moderate harmful content</p>
             </div>
             <Toggle
-              checked={settings.autoModeration}
+              checked={settings?.autoModeration || false}
               onChange={(value) => handleChange('autoModeration', value)}
             />
           </div>
@@ -137,7 +187,7 @@ export const SettingsPage = () => {
               <p className="text-sm text-gray-400">Send welcome messages to new members</p>
             </div>
             <Toggle
-              checked={settings.welcomeMessage}
+              checked={settings?.welcomeMessage || false}
               onChange={(value) => handleChange('welcomeMessage', value)}
             />
           </div>
@@ -148,7 +198,7 @@ export const SettingsPage = () => {
               <p className="text-sm text-gray-400">Log all bot activities</p>
             </div>
             <Toggle
-              checked={settings.logsEnabled}
+              checked={settings?.logsEnabled || false}
               onChange={(value) => handleChange('logsEnabled', value)}
             />
           </div>
@@ -159,7 +209,7 @@ export const SettingsPage = () => {
               <p className="text-sm text-gray-400">Enable announcement features</p>
             </div>
             <Toggle
-              checked={settings.announcements}
+              checked={settings?.announcements || false}
               onChange={(value) => handleChange('announcements', value)}
             />
           </div>
@@ -172,10 +222,10 @@ export const SettingsPage = () => {
             These actions are irreversible. Please be careful.
           </p>
           <div className="flex gap-2 pt-4">
-            <Button variant="danger" disabled={loading}>
+            <Button variant="danger" disabled={saving}>
               Delete All Logs
             </Button>
-            <Button variant="danger" disabled={loading}>
+            <Button variant="danger" disabled={saving}>
               Reset All Settings
             </Button>
           </div>

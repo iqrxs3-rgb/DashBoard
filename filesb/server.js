@@ -11,8 +11,7 @@ import guildRoutes from './routes/guildRoutes.js'
 import commandRoutes from './routes/commandRoutes.js'
 import roleRoutes from './routes/roleRoutes.js'
 import logRoutes from './routes/logRoutes.js'
-
-// Load environment variables
+import adminRoutes from './routes/adminRoutes.js'// Load environment variables
 dotenv.config()
 
 // Initialize Express app
@@ -74,7 +73,8 @@ app.use('/api/guilds/:guildId/roles', roleRoutes)
 
 // Log routes (nested under guilds)
 app.use('/api/guilds/:guildId/logs', logRoutes)
-
+  
+app.use('/api/admin', adminRoutes)
 // ============================================
 // ERROR HANDLING
 // ============================================

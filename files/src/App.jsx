@@ -6,6 +6,7 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 
 // Pages
 import { LoginPage } from './pages/LoginPage'
+import { AdminPage } from './pages/Adminpage' // ← ADD THIS LINE
 import { DashboardPage } from './pages/DashboardPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { CommandsPage } from './pages/CommandsPage'
@@ -30,6 +31,9 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/callback" element={<LoginPage />} />
+
+        {/* ← ADD THIS ROUTE (Admin Panel) */}
+        <Route path="/admin" element={<AdminPage />} />
 
         <Route
           path="/dashboard"

@@ -1,7 +1,7 @@
 import oauth from '../config/discord.js'
 import User from '../models/User.js'
 import Guild from '../models/Guild.js'
-import { generateToken, successResponse, errorResponse, sanitizeUser, sanitizeGuild } from '../utils/helpers.js'
+import { generateToken, successResponse, errorResponse, sanitizeUser } from '../utils/helpers.js'
 
 /**
  * Get Discord OAuth authorization URL
@@ -44,18 +44,35 @@ export const handleCallback = async (req, res) => {
     const userInfo = await oauth.getUser(token.access_token)
     const userGuilds = await oauth.getUserGuilds(token.access_token)
 
-    // Filter guilds where bot is present and check admin permissions
+    console.log('User Discord ID:', userInfo.id)
+    console.log('User Guilds:', userGuilds.map(g => ({
+      id: g.id,
+      name: g.name,
+      ownerId: g.owner ? '(Owner)' : '',
+      permissions: g.permissions,
+    })))
+
+    // Filter guilds - include if user is owner OR has admin/manage guild permissions
     const botGuilds = userGuilds
       .filter(guild => {
-        // Check if guild exists in our database (bot is in guild)
-        return (guild.permissions & 0x8) === 0x8 || (guild.permissions & 0x20) === 0x20
+        // User is owner of guild
+        const isOwner = guild.owner === true
+        // User has Administrator permission (0x8)
+        const hasAdminPerm = (guild.permissions & 0x8) === 0x8
+        // User has Manage Guild permission (0x20)
+        const hasManageGuild = (guild.permissions & 0x20) === 0x20
+
+        return isOwner || hasAdminPerm || hasManageGuild
       })
       .map(guild => ({
         guildId: guild.id,
         guildName: guild.name,
         guildIcon: guild.icon,
-        isAdmin: (guild.permissions & 0x8) === 0x8, // Administrator permission
+        isOwner: guild.owner === true,
+        isAdmin: (guild.permissions & 0x8) === 0x8 || (guild.permissions & 0x20) === 0x20,
       }))
+
+    console.log('Filtered Guilds (accessible):', botGuilds)
 
     // Find or create user
     let user = await User.findOne({ discordId: userInfo.id })
@@ -95,7 +112,28 @@ export const handleCallback = async (req, res) => {
           guildIcon: guild.guildIcon,
           ownerId: userInfo.id,
           ownerName: userInfo.username,
+          memberCount: 0,
+          prefix: '!',
+          description: `${guild.guildName} Bot Settings`,
+          settings: {
+            autoModeration: false,
+            welcomeMessage: false,
+            logsEnabled: true,
+            announcements: false,
+            welcomeChannel: 'general',
+          },
+          stats: {
+            totalCommands: 0,
+            totalMessages: 0,
+            totalUsers: 0,
+            activeUsers: 0,
+          },
         })
+      } else {
+        // Update existing guild with latest info
+        existingGuild.guildName = guild.guildName
+        existingGuild.guildIcon = guild.guildIcon
+        await existingGuild.save()
       }
     }
 
@@ -111,6 +149,7 @@ export const handleCallback = async (req, res) => {
             id: g.guildId,
             name: g.guildName,
             icon: g.guildIcon,
+            isOwner: g.isOwner,
             isAdmin: g.isAdmin,
           })),
         },
@@ -144,6 +183,7 @@ export const getUserGuilds = async (req, res) => {
       id: g.guildId,
       name: g.guildName,
       icon: g.guildIcon,
+      isOwner: g.isOwner,
       isAdmin: g.isAdmin,
     }))
 

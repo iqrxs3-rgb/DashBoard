@@ -1,5 +1,5 @@
 import express from 'express'
-import { authenticate } from '../middlewares/auth.js'
+import { authenticateToken } from '../middlewares/auth.js'
 import {
   verifyAdminCredentials,
   banIP,
@@ -14,7 +14,7 @@ import {
 const router = express.Router()
 
 // All admin routes require authentication
-router.use(authenticate)
+router.use(authenticateToken)
 
 /**
  * Admin Authentication

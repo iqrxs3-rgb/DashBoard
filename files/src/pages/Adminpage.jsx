@@ -4,13 +4,13 @@ import { useAuthStore } from '../store/authStore'
 import { Card, Button, Input } from '../components'
 import { Lock, Server, Users, AlertTriangle, Trash2, Ban, Database } from 'lucide-react'
 
-const AdminLoginPage = ({ onAdminLogin, user }) => {
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://beirut.up.railway.app/api'
+
+const AdminLoginPage = ({ onAdminLogin, user, loading, error, setError }) => {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [apiKey, setApiKey] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Try Discord login first
   useEffect(() => {
     if (user?.id) {
       tryDiscordLogin()
@@ -19,12 +19,13 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
 
   const tryDiscordLogin = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/admin/verify-credentials', {
+      setIsLoading(true)
+      const token = useAuthStore.getState().token
+      const response = await fetch(`${API_BASE_URL}/admin/verify-credentials`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${useAuthStore.getState().token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           username: '',
@@ -46,22 +47,21 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
       setError('Discord login failed: ' + err.message)
       console.error('Discord login error:', err)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   const handleCredentialsLogin = async () => {
     try {
-      setLoading(true)
+      setIsLoading(true)
       setError('')
 
       if (!credentials.username && !apiKey) {
         setError('Enter username/password or API key')
-        setLoading(false)
         return
       }
 
-      const response = await fetch('/api/admin/verify-credentials', {
+      const response = await fetch(`${API_BASE_URL}/admin/verify-credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +85,7 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
       setError('Connection error: ' + err.message)
       console.error('Login error:', err)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -108,21 +108,19 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
             </div>
           )}
 
-          {loading && (
+          {isLoading && (
             <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500 rounded text-blue-300 text-sm">
               Verifying admin access...
             </div>
           )}
 
-          {/* If logged in with Discord, auto-check for admin */}
-          {user && loading && (
+          {user && !isLoading && (
             <p className="text-center text-gray-400 text-sm">
               Checking if you're an admin...
             </p>
           )}
 
-          {/* If not auto-logged or auto-login failed, show credentials form */}
-          {(!user || !loading) && (
+          {(!user || !isLoading) && (
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Username</label>
@@ -131,7 +129,7 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
                   placeholder="Admin username"
                   value={credentials.username}
                   onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -142,7 +140,7 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
                   placeholder="Admin password"
                   value={credentials.password}
                   onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -153,17 +151,17 @@ const AdminLoginPage = ({ onAdminLogin, user }) => {
                   placeholder="Master API key"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
               <Button
                 variant="primary"
                 onClick={handleCredentialsLogin}
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full"
               >
-                {loading ? 'Verifying...' : 'Login to Admin Panel'}
+                {isLoading ? 'Verifying...' : 'Login to Admin Panel'}
               </Button>
             </div>
           )}
@@ -191,6 +189,7 @@ export const AdminPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [showBanIPForm, setShowBanIPForm] = useState(false)
   const [banIpData, setBanIpData] = useState({ ip: '', reason: '' })
+  const [error, setError] = useState('')
 
   const handleAdminLogin = async (adminData) => {
     console.log('Admin login successful:', adminData)
@@ -208,9 +207,9 @@ export const AdminPage = () => {
       }
 
       const [statsRes, serversRes, usersRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers }),
-        fetch('/api/admin/servers', { headers }),
-        fetch('/api/admin/users', { headers }),
+        fetch(`${API_BASE_URL}/admin/stats`, { headers }),
+        fetch(`${API_BASE_URL}/admin/servers`, { headers }),
+        fetch(`${API_BASE_URL}/admin/users`, { headers }),
       ])
 
       if (!statsRes.ok || !serversRes.ok || !usersRes.ok) {
@@ -224,11 +223,11 @@ export const AdminPage = () => {
       console.log('Admin data loaded:', { statsData, serversData, usersData })
 
       setStats(statsData.data)
-      setServers(serversData.data.servers)
-      setUsers(usersData.data.users)
+      setServers(serversData.data?.servers || [])
+      setUsers(usersData.data?.users || [])
     } catch (error) {
       console.error('Failed to load admin data:', error)
-      alert('Error loading admin data: ' + error.message)
+      setError('Error loading admin data: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -236,7 +235,7 @@ export const AdminPage = () => {
 
   const handleDeleteServer = async (guildId, serverName) => {
     try {
-      const response = await fetch(`/api/admin/servers/${guildId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/servers/${guildId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +260,7 @@ export const AdminPage = () => {
 
   const handleBanIP = async () => {
     try {
-      const response = await fetch('/api/admin/ban-ip', {
+      const response = await fetch(`${API_BASE_URL}/admin/ban-ip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +288,7 @@ export const AdminPage = () => {
   }
 
   if (!isAdmin) {
-    return <AdminLoginPage onAdminLogin={handleAdminLogin} user={user} />
+    return <AdminLoginPage onAdminLogin={handleAdminLogin} user={user} loading={loading} error={error} setError={setError} />
   }
 
   return (
@@ -335,28 +334,28 @@ export const AdminPage = () => {
               <Card className="bg-blue-500/10 border-blue-500/30">
                 <p className="text-gray-400 text-sm">Total Servers</p>
                 <p className="text-3xl font-bold text-blue-400 mt-2">
-                  {stats?.database?.servers || 0}
+                  {stats?.totalServers || servers.length || 0}
                 </p>
               </Card>
 
               <Card className="bg-purple-500/10 border-purple-500/30">
                 <p className="text-gray-400 text-sm">Total Users</p>
                 <p className="text-3xl font-bold text-purple-400 mt-2">
-                  {stats?.database?.users || 0}
+                  {stats?.totalUsers || users.length || 0}
                 </p>
               </Card>
 
               <Card className="bg-green-500/10 border-green-500/30">
                 <p className="text-gray-400 text-sm">Total Logs</p>
                 <p className="text-3xl font-bold text-green-400 mt-2">
-                  {stats?.database?.logs || 0}
+                  {stats?.totalLogs || 0}
                 </p>
               </Card>
 
               <Card className="bg-yellow-500/10 border-yellow-500/30">
                 <p className="text-gray-400 text-sm">Total Commands</p>
                 <p className="text-3xl font-bold text-yellow-400 mt-2">
-                  {stats?.database?.totalCommands || 0}
+                  {stats?.totalCommands || 0}
                 </p>
               </Card>
             </div>
@@ -386,7 +385,7 @@ export const AdminPage = () => {
                       <div>
                         <p className="font-semibold text-white">{server.name}</p>
                         <p className="text-sm text-gray-400">
-                          {server.memberCount} members • {server.commandCount} commands
+                          {server.memberCount || 0} members • {server.commandCount || 0} commands
                         </p>
                       </div>
 
@@ -402,7 +401,6 @@ export const AdminPage = () => {
               </Card>
             )}
 
-            {/* Delete Confirmation */}
             {showDeleteConfirm && (
               <Card className="border-red-500/50 bg-red-500/10">
                 <p className="text-red-400 font-semibold mb-4">
@@ -453,7 +451,7 @@ export const AdminPage = () => {
                       <div>
                         <p className="font-semibold text-white">{userData.username}</p>
                         <p className="text-sm text-gray-400">
-                          {userData.email} • {userData.serverCount} servers
+                          {userData.email} • {userData.serverCount || 0} servers
                         </p>
                       </div>
 
@@ -476,7 +474,6 @@ export const AdminPage = () => {
               Admin Tools
             </h2>
 
-            {/* Ban IP */}
             <Card className="border-orange-500/30 bg-orange-500/10">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Ban size={20} className="text-orange-400" />
@@ -519,7 +516,6 @@ export const AdminPage = () => {
               )}
             </Card>
 
-            {/* Clear Logs */}
             <Card className="border-red-500/30 bg-red-500/10">
               <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
                 <AlertTriangle size={20} className="text-red-400" />

@@ -64,8 +64,8 @@ export const RolesPage = () => {
   const loadRoles = async () => {
     try {
       setLoading(true)
-     const response = await roleApi.getRoles(guildId)
-      setRoles(response.data)
+     // const response = await roleApi.getRoles(guildId)
+     // setRoles(response.data)
     } catch (error) {
       console.error('Error loading roles:', error)
     } finally {

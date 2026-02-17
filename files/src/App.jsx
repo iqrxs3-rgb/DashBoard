@@ -43,7 +43,8 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/callback" element={<LoginPage />} />
-
+        <Route path="/admin" element={ <AdminPage />} />
+              
         {/* Protected Routes */}
         <Route
           path="/dashboard"
@@ -60,10 +61,7 @@ function App() {
           <Route path=":serverId/logs" element={<LogsPage />} />
           <Route path=":serverId/statistics" element={<StatisticsPage />} />
           <Route path=":serverId/settings" element={<SettingsPage />} />        
-          <Route path="/admin" element={
-            <ProtectedRoute>
-               <AdminPage />
-                </ProtectedRoute>} />
+          
 
         </Route>
 
